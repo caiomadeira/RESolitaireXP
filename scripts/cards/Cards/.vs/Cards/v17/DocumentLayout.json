@@ -1,0 +1,37 @@
+{
+  "Version": 1,
+  "WorkspaceRootPath": "C:\\Users\\caiom\\OneDrive\\\u00C1rea de Trabalho\\RESolitaireXP\\scripts\\cards\\Cards\\",
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{9862D04F-0D88-4DE1-B27D-ADD07BE0B58B}|Cards.vcxproj|C:\\Users\\caiom\\OneDrive\\\u00C1rea de Trabalho\\RESolitaireXP\\scripts\\cards\\Cards\\testCards.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
+      "RelativeMoniker": "D:0:0:{9862D04F-0D88-4DE1-B27D-ADD07BE0B58B}|Cards.vcxproj|solutionrelative:testCards.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
+    }
+  ],
+  "DocumentGroupContainers": [
+    {
+      "Orientation": 0,
+      "VerticalTabListWidth": 256,
+      "DocumentGroups": [
+        {
+          "DockedWidth": 200,
+          "SelectedChildIndex": 0,
+          "Children": [
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "testCards.cpp",
+              "DocumentMoniker": "C:\\Users\\caiom\\OneDrive\\\u00C1rea de Trabalho\\RESolitaireXP\\scripts\\cards\\Cards\\testCards.cpp",
+              "RelativeDocumentMoniker": "testCards.cpp",
+              "ToolTip": "C:\\Users\\caiom\\OneDrive\\\u00C1rea de Trabalho\\RESolitaireXP\\scripts\\cards\\Cards\\testCards.cpp",
+              "RelativeToolTip": "testCards.cpp",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAkAAABSAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
+              "WhenOpened": "2025-01-03T20:34:06.891Z",
+              "EditorCaption": ""
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
