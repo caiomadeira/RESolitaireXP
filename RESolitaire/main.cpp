@@ -20,6 +20,19 @@ LONG DAT_01007368 = 0;
 LONG DAT_01007310 = 0;
 int DAT_01007168 = 0;
 int DAT_01007364 = 0;
+int DAT_0100718c = 0;
+int DAT_01007348 = 0;
+int DAT_01007338 = 0;
+HBRUSH solidBrush; // DAT_0100737c
+WCHAR DAT_010072a0[100]; // SOME WCHAR BUFFER
+UINT registerWinMsgResult; // DAT_01007160
+HICON hIcon;
+HANDLE _handle; // _DAT_0100720c
+
+DWORD _DAT_01007020;
+
+// Timer Callback
+DWORD* DAT_01007170 = 0;
 
 // SSet for cards dll cdtInit
 typedef BOOL(WINAPI *cdtInitPtr)(int* width, int* height);
@@ -35,6 +48,15 @@ HINSTANCE LoadCardDll(const char* path)
         return NULL;
     }
     return hCardsDLL;
+}
+
+unsigned int lpTimerFuncCallback(void)
+{
+      if (DAT_01007170 != nullptr) 
+      {
+        (*(code *)*DAT_01007170)(DAT_01007170, 0x11,0,0);
+      }
+  return 1;
 }
 
 // uint tempwWinMain(HINSTANCE param_1,int param_2,undefined4 param_3,int param_4)
@@ -74,7 +96,7 @@ void PassesToLoadString(LPWSTR lpBuffer, USHORT uID, int cchBufferMax)
     return;
 }
 
-int MainGameWindow(HINSTANCE hinstance, int nCmdShow, short* param_3, int param_4)
+int MainGameWindow(HINSTANCE hinstance, int nCmdShow, short* commandLine, int param_4)
 { 
   // LOAD DLL
     HINSTANCE hCardsDll = LoadCardDll("cards.dll");
@@ -122,25 +144,23 @@ int MainGameWindow(HINSTANCE hinstance, int nCmdShow, short* param_3, int param_
             DAT_01007310 = textMetrics.tmMaxCharWidth;
             initResult = GetDeviceCaps(hdc,0x18);
             if (initResult == 2) 
-            {
                 DAT_01007168 = 1;
-            }
             int _DAT_01007360 = GetDeviceCaps(hdc,8);
             DAT_01007364 = GetDeviceCaps(hdc,10);
             DAT_0100718c = (UINT)(DAT_01007364 < 300);
             
             if (DAT_0100718c != 0) 
-                DAT_0100730c = DAT_0100730c / 2;
+                height = height / 2;
 
             ReleaseDC((HWND)0x0,hdc);
-            DAT_01007348 = (-(uint)(DAT_01007168 != 0) & 0xff7fff) + 0x8000;
-            DAT_0100737c = CreateSolidBrush(DAT_01007348);
+            DAT_01007348 = (-(UINT)(DAT_01007168 != 0) & 0xff7fff) + 0x8000;
+            solidBrush = CreateSolidBrush(DAT_01007348);
             currentTime = time((time_t *)0x0);
             srand((UINT)currentTime & 0xffff);
             PassesToLoadString((LPWSTR)&windowTitleBuffer, 100, 10);
             PassesToLoadString((LPWSTR)&DAT_010072a0,0x65,0x32);
             PassesToLoadString(windowTitleBuffer,0x67,0x14);
-            DAT_01007160 = RegisterWindowMessageW(windowTitleBuffer);
+            registerWinMsgResult = RegisterWindowMessageW(windowTitleBuffer);
             flagCursorVisibility = 0;
             currentChar = *commandLine;
             commandPtr = commandLine;
@@ -156,7 +176,7 @@ int MainGameWindow(HINSTANCE hinstance, int nCmdShow, short* param_3, int param_
         commonControls.dwICC = 0x16fd;
         InitCommonControlsEx(&commonControls);
         hIcon = LoadIconW(hInstance,(LPCWSTR)0x1f4);
-        _DAT_0100720c = (HICON)LoadImageW(hInstance,(LPCWSTR)0x1f4,1,0x10,0x10,0);
+        _handle = (HICON)LoadImageW(hInstance,(LPCWSTR)0x1f4,1,0x10,0x10,0);
         if (nCmdShow == 0) {
             wndClassPtr = &wc;
             for (initResult = 0xc; initResult != 0; initResult = initResult + -1) {
@@ -166,46 +186,46 @@ int MainGameWindow(HINSTANCE hinstance, int nCmdShow, short* param_3, int param_
             wc.hInstance = hInstance;
             wc.hIcon = hIcon;
             wc.hCursor = cursor;
-            wc.hbrBackground = DAT_0100737c;
+            wc.hbrBackground = solidBrush; // wc.hbrBackground = DAT_0100737c;
             wc.cbSize = 0x30;
             wc.style = 0x2008;
             wc.lpfnWndProc = FUN_010016bd;
             wc.lpszMenuName = (LPCWSTR)0x1;
-            wc.lpszClassName = u_Tarot_Sol._0100700c;
-            wc.hIconSm = _DAT_0100720c;
+            wc.lpszClassName = L"Solitaire";
+            wc.hIconSm = (HICON)_handle;
             clAtom = RegisterClassExW(&wc);
             if (clAtom == 0) goto LAB_01001e0f;
         }
         windowRect.top = 0;
         windowRect.left = 0;
-        DAT_01007338 = DAT_01007308 / 8 + 3;
-        windowRect.right = DAT_01007308 * 7 + DAT_01007338 * 8;
-        windowRect.bottom = DAT_0100730c << 2;
+        DAT_01007338 = width / 8 + 3;
+        windowRect.right = width * 7 + DAT_01007338 * 8;
+        windowRect.bottom = height << 2;
         AdjustWindowRect(&windowRect,0xcf0000,1);
         windowRect.bottom = windowRect.bottom - windowRect.top;
         windowRect.right = windowRect.right - windowRect.left;
         if (DAT_01007364 < windowRect.bottom) {
             windowRect.bottom = DAT_01007364;
         }
-        hWnd = CreateWindowExW(0,u_Tarot_Sol._0100700c,(LPCWSTR)&WindowTitle,
-                                (-(uint)flagCursorVisibility & 0x20000000) + 0x2cf0000,-0x80000000,0,
-                                windowRect.right,windowRect.bottom,(HWND)0x0,(HMENU)0x0,hInstance,
+        hwnd = CreateWindowExW(0,L"Solitaire",(LPCWSTR)&windowTitleBuffer,
+                                (-(UINT)flagCursorVisibility & 0x20000000) + 0x2cf0000,-0x80000000,0,
+                                windowRect.right, windowRect.bottom,(HWND)0x0,(HMENU)0x0,hInstance,
                                 (LPVOID)0x0);
-        if (hWnd != (HWND)0x0) {
-            FUN_01001504((uint *)&commandLine);
-            timerId = SetTimer(hWnd,0x29a,0xfa,(TIMERPROC)&LAB_0100142b);
+        if (hwnd != (HWND)0x0) {
+            FUN_01001504((UINT *)&commandLine);
+            timerId = SetTimer(hwnd,0x29a,0xfa,(TIMERPROC)&lpTimerFuncCallback);
             if (timerId != 0) {
             thunk_FUN_01005581();
             FUN_010026f8((int)commandLine);
-            ShowWindow(hWnd,param_4);
-            UpdateWindow(hWnd);
+            ShowWindow(hwnd,param_4);
+            UpdateWindow(hwnd);
             hAccTable = LoadAcceleratorsW(hinstance,L"HiddenAccel");
-            FUN_01005f1e((uint)(nCmdShow == 0));
+            FUN_01005f1e((UINT)(nCmdShow == 0));
             if (_DAT_01007020 != 0) {
                 FUN_01005c79();
             }
             if ((param_4 != 7) && (param_4 != 6)) {
-                PostMessageW(hWnd,0x111,1000,0);
+                PostMessageW(hwnd,0x111,1000,0);
             }
             return 1;
             }
