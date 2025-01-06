@@ -1,238 +1,245 @@
-#include<windows.h>
-#include<iostream>
-#include<stdlib.h>
-#include<stdio.h>
-#include <CommCtrl.h> // INITCOMMONCONTROLSEX
+// RESolitaireXP.cpp : Define o ponto de entrada para o aplicativo.
+// g++ main.cpp -o RESolitaireXP.exe -mwindows -luser32 -lgdi32 -lcomctl32
 
-#pragma comment(lib, "cards.dll")
+#define UNICODE
+#define _UNICODE
+#include "common.h"
 
+#pragma comment(lib, "comctl32.lib")
+
+typedef BOOL(WINAPI *cdtInitPtr)(int *width, int *height);
+typedef BOOL(WINAPI *cdtDrawPtr)(HDC hdc, int x, int y, int cardID, DWORD flags);
+typedef BOOL(WINAPI *cdtAnimatePtr)(int animationType, int param1, int param2, int speed);
+typedef BOOL(WINAPI *cdtTermPtr)();
+HBRUSH defaultBackGround(void);
+BOOL customErrorMsgBox(CONST WCHAR* msg, CONST WCHAR* title);
+HMENU CreateMainMenu(void);
+void customCdtDraw(HDC hdc, int x, int y, int id, DWORD flags);
+void DrawInitialDeck(void);
+// HBRUSH fillBackGround(void);
 // GLOBALS
 HWND hwnd;
-HACCEL hAccTable;
-HINSTANCE hInstance;
+HDC hdc;
+HBRUSH backgroundBrush;
+HMENU hMenu;
+// ----------------
+cdtInitPtr cdtInit;
+cdtDrawPtr cdtDraw;
+cdtAnimatePtr cdtAnimate;
+cdtTermPtr cdtTerm;
 
-// Undefined Globals - Mapping
-LPWSTR* lpBuffer;    //DAT_01007220
-int width = 0; // &DAT_01007308 = 00000000h
-int height = 0;// &DAT_0100730c = 00000000h
+HINSTANCE hCardsDll;
+int width, height;
 
-LONG DAT_01007368 = 0;
-LONG DAT_01007310 = 0;
-int DAT_01007168 = 0;
-int DAT_01007364 = 0;
-int DAT_0100718c = 0;
-int DAT_01007348 = 0;
-int DAT_01007338 = 0;
-HBRUSH solidBrush; // DAT_0100737c
-WCHAR DAT_010072a0[100]; // SOME WCHAR BUFFER
-UINT registerWinMsgResult; // DAT_01007160
-HICON hIcon;
-HANDLE _handle; // _DAT_0100720c
-
-DWORD _DAT_01007020;
-
-// Timer Callback
-DWORD* DAT_01007170 = 0;
-
-// SSet for cards dll cdtInit
-typedef BOOL(WINAPI *cdtInitPtr)(int* width, int* height);
-int MainGameWindow(HINSTANCE hinstance, int nCmdShow, short* param_3, int param_4);
-
-
-HINSTANCE LoadCardDll(const char* path)
+typedef enum 
 {
-    HINSTANCE hCardsDLL = LoadLibrary(TEXT("cards.dll"));
-    if (!hCardsDLL)
-    {
-        printf("Falha ao carregar cards.dll. Erro: 0x%x\n", GetLastError());
-        return NULL;
-    }
-    return hCardsDLL;
-}
+    ACE   = 0,
+    TWO   = 1,
+    THREE = 2,
+    FOUR  = 3,
+    FIVE  = 4,
+    SIX   = 5,
+    SEVEN = 6,
+    EIGHT = 7,
+    NINE  = 8,
+    TEN   = 9,
+    JACK  = 10,
+    QUEEN = 11,
+    KING  = 12
+} CardsID;
 
-unsigned int lpTimerFuncCallback(void)
+
+BOOL LoadCardsDll()
 {
-      if (DAT_01007170 != nullptr) 
-      {
-        (*(code *)*DAT_01007170)(DAT_01007170, 0x11,0,0);
-      }
-  return 1;
-}
-
-// uint tempwWinMain(HINSTANCE param_1,int param_2,undefined4 param_3,int param_4)
-int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _In_ LPWSTR lpCmdLine, _In_ int nCmdShow)
-{
-  LPWSTR commandLine;
-  UINT result;
-  int isAccelerated;
-  BOOL messageStatus;
-  tagMSG msg;
-  
-  commandLine = GetCommandLineW();
-  int param_4 = 1;
-  //wchar_t (usado por LPWSTR) e short têm o mesmo tamanho (2 bytes). 
-  result = MainGameWindow(hInstance, nCmdShow, (short*)commandLine, param_4);
-  if (result != 0) {
-    msg.wParam = 1;
-    while(true) 
-    {
-      messageStatus = GetMessageW(&msg,(HWND)nullptr,0,0);
-      if (messageStatus == 0) break;
-      isAccelerated = TranslateAcceleratorW(hwnd, hAccTable, &msg);
-      if (isAccelerated == 0) 
-      {
-        TranslateMessage(&msg);
-        DispatchMessageW(&msg);
-      }
-    }
-    result = msg.wParam != 0;
-  }
-  return result;
-}
-
-void PassesToLoadString(LPWSTR lpBuffer, USHORT uID, int cchBufferMax)
-{
-    LoadStringW(hInstance, (UINT)uID, lpBuffer, cchBufferMax);
-    return;
-}
-
-int MainGameWindow(HINSTANCE hinstance, int nCmdShow, short* commandLine, int param_4)
-{ 
-  // LOAD DLL
-    HINSTANCE hCardsDll = LoadCardDll("cards.dll");
-    cdtInitPtr cdtInit = (cdtInitPtr)GetProcAddress(hCardsDll, "cdtInit");
-    if (!cdtInit)
-    {
-        printf("Falha ao obter nomes de cards.dll. Erro: 0x%x\n", GetLastError());
-        FreeLibrary(hCardsDll);
-        return 1;
+    hCardsDll = LoadLibrary(TEXT("cards_original.dll"));
+    if (!hCardsDll) {
+        DWORD errorCode = GetLastError();
+        wchar_t errorMsg[256];
+        FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM, NULL, errorCode, 0, errorMsg, 256, NULL);
+        MessageBox(NULL, errorMsg, L"Erro ao carregar cards.dll!", MB_OK);
+        return FALSE;
     }
 
-    // INIT FUNCTION
-    short currentChar;
-    ATOM clAtom;
-    int initResult;
-    HDC hdc;
-    UINT_PTR timerId;
-    short *commandPtr;
-    WNDCLASSEXW *wndClassPtr;
-    time_t currentTime;
-    tagTEXTMETRICW textMetrics;
-    WCHAR windowTitleBuffer [20];
-    WNDCLASSEXW wc;
-    INITCOMMONCONTROLSEX commonControls;
-    HCURSOR cursor;
-    tagRECT windowRect;
-    byte flagCursorVisibility;
-    
-    hInstance = hinstance;
+    cdtInit = (cdtInitPtr)GetProcAddress(hCardsDll, "cdtInit");
+    cdtDraw = (cdtDrawPtr)GetProcAddress(hCardsDll, "cdtDraw");
 
-    // **************************************************
-    USHORT uID = 300;
-    int cchBufferMax = 0x32;
-    PassesToLoadString((LPWSTR)&lpBuffer,300,0x32);
-    // **************************************************
+    if (!cdtInit) {
+        MessageBox(NULL, L"Error in cdtInit.", L"Erro", MB_OK);
+        return FALSE;
+    }
 
-    initResult = cdtInit(&width, &height);
-    if (initResult != 0) {
-        cursor = LoadCursorW((HINSTANCE)0x0, (LPCWSTR)0x7f00);
-        hdc = GetDC((HWND)0x0);
-        if (hdc != (HDC)0x0) 
+    if (!cdtDraw)
+    {
+        MessageBox(NULL, L"Error in cdtDraw.", L"Erro", MB_OK);
+        return FALSE;
+    }
+
+    cdtAnimatePtr cdtAnimate = (cdtAnimatePtr)GetProcAddress(hCardsDll, "cdtAnimate");
+    cdtTermPtr cdtTerm = (cdtTermPtr)GetProcAddress(hCardsDll, "cdtTerm");
+
+    if (!cdtAnimate || !cdtTerm)
+    {
+        MessageBox(NULL, L"Error in cdtAnimate or cdtTerm.", L"Erro", MB_OK);
+        return FALSE;
+    }
+
+
+    cdtInit(&width, &height);
+    return TRUE;
+}
+
+LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+{
+    //HDC hdc;
+    PAINTSTRUCT ps;
+
+    switch (uMsg)
+    {
+    case WM_PAINT:
+        hdc = BeginPaint(hwnd, &ps);  // Obter HDC válido
+        if (hdc) 
         {
-            GetTextMetricsW(hdc,&textMetrics);
-            DAT_01007368 = textMetrics.tmHeight;
-            DAT_01007310 = textMetrics.tmMaxCharWidth;
-            initResult = GetDeviceCaps(hdc,0x18);
-            if (initResult == 2) 
-                DAT_01007168 = 1;
-            int _DAT_01007360 = GetDeviceCaps(hdc,8);
-            DAT_01007364 = GetDeviceCaps(hdc,10);
-            DAT_0100718c = (UINT)(DAT_01007364 < 300);
-            
-            if (DAT_0100718c != 0) 
-                height = height / 2;
-
-            ReleaseDC((HWND)0x0,hdc);
-            DAT_01007348 = (-(UINT)(DAT_01007168 != 0) & 0xff7fff) + 0x8000;
-            solidBrush = CreateSolidBrush(DAT_01007348);
-            currentTime = time((time_t *)0x0);
-            srand((UINT)currentTime & 0xffff);
-            PassesToLoadString((LPWSTR)&windowTitleBuffer, 100, 10);
-            PassesToLoadString((LPWSTR)&DAT_010072a0,0x65,0x32);
-            PassesToLoadString(windowTitleBuffer,0x67,0x14);
-            registerWinMsgResult = RegisterWindowMessageW(windowTitleBuffer);
-            flagCursorVisibility = 0;
-            currentChar = *commandLine;
-            commandPtr = commandLine;
-            while (currentChar != 0) {
-                if ((currentChar == 0x2f) && (commandPtr[1] == 0x49)) {
-                flagCursorVisibility = 1;
-                break;
-                }
-                commandPtr = commandPtr + 1;
-                currentChar = *commandPtr;
+            // Tentativa de desenhar uma carta
+            DrawInitialDeck();
+            EndPaint(hwnd, &ps);  // Finalizar o HDC
+        } 
+        else 
+        {
+            MessageBox(NULL, L"Erro ao obter HDC!", L"Erro", MB_OK);
         }
-        commonControls.dwSize = 8;
-        commonControls.dwICC = 0x16fd;
-        InitCommonControlsEx(&commonControls);
-        hIcon = LoadIconW(hInstance,(LPCWSTR)0x1f4);
-        _handle = (HICON)LoadImageW(hInstance,(LPCWSTR)0x1f4,1,0x10,0x10,0);
-        if (nCmdShow == 0) {
-            wndClassPtr = &wc;
-            for (initResult = 0xc; initResult != 0; initResult = initResult + -1) {
-            wndClassPtr->cbSize = 0;
-            wndClassPtr = (WNDCLASSEXW *)&wndClassPtr->style;
-            }
-            wc.hInstance = hInstance;
-            wc.hIcon = hIcon;
-            wc.hCursor = cursor;
-            wc.hbrBackground = solidBrush; // wc.hbrBackground = DAT_0100737c;
-            wc.cbSize = 0x30;
-            wc.style = 0x2008;
-            wc.lpfnWndProc = FUN_010016bd;
-            wc.lpszMenuName = (LPCWSTR)0x1;
-            wc.lpszClassName = L"Solitaire";
-            wc.hIconSm = (HICON)_handle;
-            clAtom = RegisterClassExW(&wc);
-            if (clAtom == 0) goto LAB_01001e0f;
+        break;
+    case WM_COMMAND:
+        switch (LOWORD(wParam))
+        {
+        case 1:
+            MessageBox(hwnd, L"Novo arquivo criado!", L"Menu: Arquivo", MB_OK);
+            break;
+        
+        default:
+            break;
         }
-        windowRect.top = 0;
-        windowRect.left = 0;
-        DAT_01007338 = width / 8 + 3;
-        windowRect.right = width * 7 + DAT_01007338 * 8;
-        windowRect.bottom = height << 2;
-        AdjustWindowRect(&windowRect,0xcf0000,1);
-        windowRect.bottom = windowRect.bottom - windowRect.top;
-        windowRect.right = windowRect.right - windowRect.left;
-        if (DAT_01007364 < windowRect.bottom) {
-            windowRect.bottom = DAT_01007364;
-        }
-        hwnd = CreateWindowExW(0,L"Solitaire",(LPCWSTR)&windowTitleBuffer,
-                                (-(UINT)flagCursorVisibility & 0x20000000) + 0x2cf0000,-0x80000000,0,
-                                windowRect.right, windowRect.bottom,(HWND)0x0,(HMENU)0x0,hInstance,
-                                (LPVOID)0x0);
-        if (hwnd != (HWND)0x0) {
-            FUN_01001504((UINT *)&commandLine);
-            timerId = SetTimer(hwnd,0x29a,0xfa,(TIMERPROC)&lpTimerFuncCallback);
-            if (timerId != 0) {
-            thunk_FUN_01005581();
-            FUN_010026f8((int)commandLine);
-            ShowWindow(hwnd,param_4);
-            UpdateWindow(hwnd);
-            hAccTable = LoadAcceleratorsW(hinstance,L"HiddenAccel");
-            FUN_01005f1e((UINT)(nCmdShow == 0));
-            if (_DAT_01007020 != 0) {
-                FUN_01005c79();
-            }
-            if ((param_4 != 7) && (param_4 != 6)) {
-                PostMessageW(hwnd,0x111,1000,0);
-            }
-            return 1;
-            }
-        }
-        }
+    case WM_DESTROY:
+        PostQuitMessage(0);
+        break;
     }
-    LAB_01001e0f:
-    FUN_010023e2();
+
+    return DefWindowProc(hwnd, uMsg, wParam, lParam);
+}
+
+int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
+{
+    ATOM regClass;
+    WNDCLASS wc = { 0 };
+    wc.lpfnWndProc = WindowProc;
+    wc.hInstance = hInstance;
+    wc.lpszClassName = L"Solitaire Window XP";
+    wc.style = 0x2008;
+    wc.hbrBackground = defaultBackGround();
+    wc.lpszMenuName = (LPCWSTR)0X1;
+
+    regClass = RegisterClass(&wc);
+    if (!regClass)
+        customErrorMsgBox(L"Register class error", wc.lpszClassName);
+
+    hwnd = CreateWindowEx(0, wc.lpszClassName, wc.lpszClassName, WS_OVERLAPPEDWINDOW, 
+    CW_USEDEFAULT, CW_USEDEFAULT, 800, 600, NULL, NULL, hInstance, NULL);
+    if (hwnd != NULL)
+    {
+        if (!LoadCardsDll()) return -1;
+        hMenu = CreateMainMenu();
+        if (hMenu == nullptr) 
+            customErrorMsgBox(L"Error creating menu", wc.lpszClassName);
+        else
+            SetMenu(hwnd, hMenu);
+        ShowWindow(hwnd, nCmdShow);
+        UpdateWindow(hwnd);
+    }
+
+    MSG msg = { 0 };
+    while (GetMessage(&msg, NULL, 0, 0))
+    {
+        TranslateMessage(&msg);
+        DispatchMessage(&msg);
+    }
+
+    FreeLibrary(hCardsDll);
+    DeleteObject(backgroundBrush);
     return 0;
+}
+
+HBRUSH defaultBackGround(void)
+{
+    if (!backgroundBrush)
+        backgroundBrush = CreateSolidBrush(RGB(0, 128, 0));
+    return backgroundBrush;
+}
+
+HBRUSH fillBackGround(void)
+{
+    RECT rect;
+    HBRUSH hBrush = CreateSolidBrush(RGB(0, 128, 0)); // Cor de fundo (verde)
+    if (hBrush)
+    {
+        GetClientRect(hwnd, &rect);
+        FillRect(hdc, &rect, hBrush);
+        DeleteObject(hBrush);
+        return hBrush;
+    }
+    return FALSE;
+}
+
+BOOL customErrorMsgBox(CONST WCHAR* msg, CONST WCHAR* title)
+{
+    MessageBox(NULL, msg, title, MB_OK);
+    return FALSE;
+}
+
+HMENU CreateMainMenu()
+{
+    HMENU hMenu = CreateMenu();
+    if (hMenu)
+    {
+        HMENU hGame = CreatePopupMenu();
+        HMENU hAbout = CreatePopupMenu();
+
+        // Game Menu
+        AppendMenu(hGame, MF_STRING, 1, L"Deal");
+        AppendMenu(hGame, MF_SEPARATOR, 0, NULL);
+        AppendMenu(hGame, MF_STRING, 1, L"Undo");
+        AppendMenu(hGame, MF_STRING, 1, L"Deck...");
+        AppendMenu(hGame, MF_STRING, 1, L"Options...");
+        AppendMenu(hGame, MF_SEPARATOR, 0, NULL);
+        AppendMenu(hGame, MF_STRING, 1, L"Exit");
+
+        // About Menu
+        AppendMenu(hAbout, MF_STRING, 1, L"Contents");
+        AppendMenu(hAbout, MF_STRING, 1, L"Search for Help on...");
+        AppendMenu(hAbout, MF_STRING, 1, L"How to Use Help");
+        AppendMenu(hGame, MF_SEPARATOR, 0, NULL);
+        AppendMenu(hAbout, MF_STRING, 1, L"About Solitaire");
+
+        AppendMenu(hMenu, MF_POPUP, (UINT_PTR)hGame, L"Game");
+        AppendMenu(hMenu, MF_POPUP, (UINT_PTR)hAbout, L"Help");
+    }
+    return hMenu;
+}
+
+void DrawInitialDeck(void)
+{
+    // Generate Deck Cover
+    // 54 - no cards img
+    int id  = 67;
+    int x = 10, y = 10;
+    customCdtDraw(hdc, x, y, id, 0);
+    
+}
+
+void customCdtDraw(HDC hdc, int x, int y, int id, DWORD flags)
+{
+    BOOL result = cdtDraw(hdc, x, y, id, 0);
+    if (!result) { 
+        wchar_t debugMsg[256];
+        swprintf(debugMsg, L"Erro no cdtDraw: width=%d, height=%d", width, height);
+        MessageBox(NULL, debugMsg, L"Erro", MB_OK);
+    }
 }
