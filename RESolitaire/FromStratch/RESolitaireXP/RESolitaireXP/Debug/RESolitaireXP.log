@@ -1,0 +1,5 @@
+﻿  RESolitaireXP.cpp
+C:\Users\caiom\OneDrive\Área de Trabalho\RESolitaireXP\RESolitaire\FromStratch\RESolitaireXP\RESolitaireXP.cpp(64,14): error C2731: 'WinMain': função não pode ser sobrecarregada
+      C:\Users\caiom\OneDrive\Área de Trabalho\RESolitaireXP\RESolitaire\FromStratch\RESolitaireXP\RESolitaireXP.cpp(64,14):
+      consulte a declaração de 'WinMain'
+  
