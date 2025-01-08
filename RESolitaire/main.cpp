@@ -12,6 +12,7 @@
 #include "error.h"
 #include "graphics.h"
 #include "cards.h"
+#include "debug.h"
 
 /****** GLOBALS *******/
 HINSTANCE hInstance;
@@ -44,14 +45,26 @@ int timerCount = 0;
 Cards deck[DECK_MAX];
 Cards tableau[TABLEAU_MAX][TABLEAU_CARDS_MAX];
 Cards foundation[SUITS_SIZE][FOUNDATION_CARDS_PER_PILE];
-Cards pile[PILE_MAX];
-int pileCount = 0;
+Cards pileBack[PILE_MAX];
+Cards pileFront[PILE_MAX];
+int pileBackCount = 0;
+int pileFrontCount = 0;
+wchar_t bitmapFullPath[100] = L""; 
+
+/********* COORDS ********/
+RECT pileRect;
+
+
+/************************ */
 
 /****** WINDOW FUNCTIONS SIGNATURES *******/
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 void NewGame(void);
-
-
+void DrawFoundationSlots(int x, int y);
+void DrawTableau(int x, int y);
+void DrawBackPile(int x, int y);
+void InitDeck(void);
+void DealCards(void);
 /*****************************************/
 
 // TODO: Update G++ to >= 7.0, because my low version prevents use of some sleep functions
@@ -82,11 +95,11 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 
     // Global hInstance
     hInstance = hInstance;
-
+    debugConsole();
     result = LoadCardsDll();
     if (result)
     {    
-        cursor = LoadCursor(hInstance, (LPCWSTR)0x7f00);
+        cursor = LoadCursor(NULL, IDC_ARROW);
         hdc = GetDC(hwnd); // The hdc is global. Maybe this not make sense.
         if (hdc != NULL)
         {
@@ -113,12 +126,13 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
             InitCommonControlsEx(&commonControls);
 
             // Load Icon and Image for
-            hIcon = LoadIcon(hInstance, (LPCWSTR)0x1f4);
-            HICON _iconHandle = (HICON)LoadImageW(hInstance, (LPCWSTR)0x1f4, 1, 0x10, 0x10, 0);
+            //hIcon = LoadIcon(hInstance, (LPCWSTR)0x1f4);
+            //HICON _iconHandle = (HICON)LoadImageW(hInstance, (LPCWSTR)0x1f4, 1, 0x10, 0x10, 0);
+            hIcon = (HICON)LoadImage(hInstance, L"assets\\icon\\icon3.ico", IMAGE_ICON, 32, 32, LR_LOADFROMFILE);
 
             wc.lpfnWndProc = WindowProc;
             wc.hInstance = hInstance;
-            wc.lpszClassName = L"Solitaire Window XP";
+            wc.lpszClassName = L"Solitaire XP";
             wc.style = 0x2008;
             wc.hbrBackground = backgroundBrush;
             wc.lpszMenuName = (LPCWSTR)0X1;
@@ -199,9 +213,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
         hdc = BeginPaint(hwnd, &ps);  // Obter HDC válido
         if (hdc) 
         {
-            // Tentativa de desenhar uma carta
-            DrawInitialDeck();
-            //InvalidateRect(hwnd, NULL, TRUE);
+            NewGame();
             EndPaint(hwnd, &ps);  // Finalizar o HDC
         } 
         else 
@@ -219,6 +231,23 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
                 MessageBox(hwnd, L"F2 pressed!", L"Accelerator", MB_OK);
                 break;
         }
+    case WM_LBUTTONDOWN: {
+        int mouseX = GET_X_LPARAM(lParam);
+        int mouseY = GET_Y_LPARAM(lParam);
+
+        if (mouseX >= pileRect.left && mouseX <= pileRect.right &&
+            mouseY >= pileRect.top && mouseY <= pileRect.bottom)
+            {
+                MessageBox(hwnd, L"CLICK NA PILE", L"PILE CLICK", MB_OK);
+                // LOGIC FOR CARDS
+                if (pileBackCount > 0)
+                {
+
+                    //InvalidateRect(hwnd, &pileRect, TRUE);
+                }
+            }
+            break;
+    }
     case WM_DESTROY:
         PostQuitMessage(0);
         break;
@@ -239,9 +268,9 @@ void DealCards(void)
     }
 
     // Remaining cards go to the pile
-    pileCount = DECK_MAX - deckIndex;
-    for (int i = 0; i < pileCount; ++i) {
-        pile[i] = deck[deckIndex++];
+    pileBackCount = DECK_MAX - deckIndex;
+    for (int i = 0; i < pileBackCount; ++i) {
+        pileBack[i] = deck[deckIndex++];
     }
 }
 
@@ -266,11 +295,39 @@ void InitDeck(void)
     }
 }
 
-void DrawPile(int x, int y)
-{
+void DrawBackPile(int x, int y)
+{   
+
+    // Valid Clickable Area for Pile
+    int pileWidth = cardWidth;
+    int pileHeight = cardHeight;
+    pileRect.left = x;
+    pileRect.top = y;
+    pileRect.right = x + pileWidth;
+    pileRect.bottom = y + pileHeight;
+
+    // Getting a value in specific range (54, 65) formula: rand() % (max - min + 1) + min
+    int min = 54;
+    int max = 65;
+    int bitmapNumber = rand() % (max - min + 1) + min;
+    LPCWSTR bitmapBasePath = L"assets\\bitmap\\";
+
+    // Concat string path with random number to get bitmap image
+    wchar_t bitmapNumberStr[10];
+    _itow(bitmapNumber, bitmapNumberStr, 10);
+    wcscpy(bitmapFullPath, bitmapBasePath);
+    wcscat(bitmapFullPath, bitmapNumberStr);
+    wcscat(bitmapFullPath, L".bmp");
+
     for (int i = 0; i < 3; ++i) {
-        DrawBitmap(hdc, L"assets\\bitmap\\54.bmp", x + i * 2, y + i * 2);
+        DrawBitmap(hdc, bitmapFullPath, x + i * 2, y + i * 2);
     }
+}
+
+// Pilha de Cartas Viradas
+void DrawFrontPile(int x, int y)
+{
+    
 }
 
 void DrawTableau(int x, int y)
@@ -285,7 +342,7 @@ void DrawTableau(int x, int y)
                 if (j == i && tableau[i][j].value != 0)
                     RECdtDraw(hdc, xOffset, yOffset, tableau[i][j].value + (tableau[i][j].suit * FOUNDATION_CARDS_PER_PILE), 0);
                 else
-                    DrawBitmap(hdc, L"assets\\bitmap\\54.bmp", xOffset, yOffset);
+                    DrawBitmap(hdc, bitmapFullPath, xOffset, yOffset);
             }
         }
     }
@@ -307,7 +364,12 @@ void NewGame(void)
     DealCards();
 
     int x = 10, y = 10;
-    DrawPile(x, y);
+    DrawBackPile(x, y);
     DrawTableau(x, y);
     DrawFoundationSlots(x + TABLEAU_MAX * (cardWidth + 20), y);
+
+    printCardsFrom("pileBack", pileBack, 24);
+    printCardsFrom("pileFront", pileFront, 24);
+    printCardsFrom("deck", deck, 51);
+
 }

@@ -8,6 +8,7 @@
 
 // Arquivos de Cabeçalho do Windows
 #include <windows.h>
+#include <windowsx.h> // For GET_X_LPARAM(lParam)
 // Arquivos de Cabeçalho C RunTime
 #include <stdlib.h>
 #include <malloc.h>
@@ -22,7 +23,8 @@
 #include <string>
 #include <thread>
 #include <chrono>
-
+#include <wchar.h>
+#include <stdlib.h>
 #include "globals.h"
 
 
