@@ -1,0 +1,3 @@
+
+1 - Compile resources: windres .\resource.rc -o .\resource.o
+2 - Compile program: g++ main.cpp .\resource.o  .\graphics.cpp  .\error.cpp .\cards.cpp -o RESolitaireXP.exe -mwindows -luser32 -lgdi32 -lcomctl32
