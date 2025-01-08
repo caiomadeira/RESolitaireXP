@@ -45,6 +45,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 void DrawInitialDeck(void);
 /*****************************************/
 
+// TODO: Update G++ to >= 7.0, because my low version prevents use of some sleep functions
 int TimerCallback(void)
 {
     //MessageBox(hwnd, L"Timer acionado com callback!", L"Timer Callback", MB_OK);
