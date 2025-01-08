@@ -23,6 +23,9 @@
 #include <thread>
 #include <chrono>
 
+#include "globals.h"
+
+
 #pragma comment(lib, "comctl32.lib")
 
 #endif

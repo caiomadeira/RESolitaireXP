@@ -40,16 +40,25 @@ UINT registerWindowMsg;
 // timer
 int timerCount = 0;
 
+// Cards
+Cards deck[DECK_MAX];
+Cards tableau[TABLEAU_MAX][TABLEAU_CARDS_MAX];
+Cards foundation[SUITS_SIZE][FOUNDATION_CARDS_PER_PILE];
+Cards pile[PILE_MAX];
+int pileCount = 0;
+
 /****** WINDOW FUNCTIONS SIGNATURES *******/
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
-void DrawInitialDeck(void);
+void NewGame(void);
+
+
 /*****************************************/
 
 // TODO: Update G++ to >= 7.0, because my low version prevents use of some sleep functions
 int TimerCallback(void)
 {
     //MessageBox(hwnd, L"Timer acionado com callback!", L"Timer Callback", MB_OK);
-    Sleep(1000);
+    //Sleep(1000);
     timerCount++;
     //Redraw status bar
     InvalidateRect(statusHwnd, NULL, TRUE); 
@@ -157,7 +166,6 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
                     CreateStatusBarWindow(hwnd, wc2);
                     //PostMessage(hwnd, 0x111, 1000, 0);
                     /***********************************************************************/
-
                 }
             }
         } else { 
@@ -193,6 +201,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
         {
             // Tentativa de desenhar uma carta
             DrawInitialDeck();
+            //InvalidateRect(hwnd, NULL, TRUE);
             EndPaint(hwnd, &ps);  // Finalizar o HDC
         } 
         else 
@@ -218,36 +227,87 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
     return DefWindowProc(hwnd, uMsg, wParam, lParam);
 }
 
-void DrawInitialDeck(void)
-{ 
+void DealCards(void)
+{
+    int deckIndex = 0;
 
-    // Draw cover
-    int xc = 10; 
-    int yc = 10;
-    for(int i = 0; i < 3; i++)
-    {
-        DrawBitmap(hdc, L"assets\\bitmap\\54.bmp", xc, yc);
-        xc = xc + 2; 
-        yc = xc + 0.5;
+    // Deal to tableau
+    for (int i = 0; i < TABLEAU_MAX; ++i) {
+        for (int j = 0; j <= i; ++j) {
+            tableau[i][j] = deck[deckIndex++];
+        }
     }
 
-    int x2;
-    int x1 = 10, y1 = cardHeight + 20;
-    int slotCount = 7;
-    // Draw cards
-    for(int i = 0; i < slotCount; i++)
-    {
-        RECdtDraw(hdc, x1, y1, i, 0);
-        x1 = x1 + (cardWidth + 10);
-        if (i == 1)
-        {
-            x2 = x1;
-            // Draw empty slots
-            for(int i = 0; i < 4; i++)
-            {
-                x2 = x2 + (cardWidth + 10);
-                RECdtDraw(hdc, x2, 10, 52, 0);
+    // Remaining cards go to the pile
+    pileCount = DECK_MAX - deckIndex;
+    for (int i = 0; i < pileCount; ++i) {
+        pile[i] = deck[deckIndex++];
+    }
+}
+
+void InitDeck(void)
+{
+    int cardIndex = 0;
+    for (int suit = 0; suit < SUITS_SIZE; ++suit) {
+        for (int value = 1; value <= FOUNDATION_CARDS_PER_PILE; ++value) {
+            deck[cardIndex].value = value;
+            deck[cardIndex].suit = (Suits)suit;
+            cardIndex++;
+        }
+    }
+
+    // Shuffle the deck
+    srand((unsigned int)time(NULL));
+    for (int i = 0; i < DECK_MAX; ++i) {
+        int j = rand() % DECK_MAX;
+        Cards temp = deck[i];
+        deck[i] = deck[j];
+        deck[j] = temp;
+    }
+}
+
+void DrawPile(int x, int y)
+{
+    for (int i = 0; i < 3; ++i) {
+        DrawBitmap(hdc, L"assets\\bitmap\\54.bmp", x + i * 2, y + i * 2);
+    }
+}
+
+void DrawTableau(int x, int y)
+{
+    y = cardHeight + 20;
+    for (int i = 0; i < TABLEAU_MAX; i++) {
+        int xOffset = x + i * (cardWidth + 10);
+        for (int j = 0; j <= i; ++j) {
+            if (tableau[i][j].value != 0) {
+                int yOffset = y + j * 3;
+
+                if (j == i && tableau[i][j].value != 0)
+                    RECdtDraw(hdc, xOffset, yOffset, tableau[i][j].value + (tableau[i][j].suit * FOUNDATION_CARDS_PER_PILE), 0);
+                else
+                    DrawBitmap(hdc, L"assets\\bitmap\\54.bmp", xOffset, yOffset);
             }
         }
     }
+}
+
+void DrawFoundationSlots(int x, int y)
+{
+    int tableauCardsQtdBeforeSlot = 3;
+    int tableauCardsPadding = 10;
+    x = cardWidth * (tableauCardsQtdBeforeSlot + 1) - (tableauCardsPadding * tableauCardsQtdBeforeSlot);
+    for (int i = 0; i < SUITS_SIZE; ++i) {
+        RECdtDraw(hdc, x + i * (cardWidth + 10), y, 52, 0);
+    }
+}
+
+void NewGame(void)
+{
+    InitDeck();
+    DealCards();
+
+    int x = 10, y = 10;
+    DrawPile(x, y);
+    DrawTableau(x, y);
+    DrawFoundationSlots(x + TABLEAU_MAX * (cardWidth + 20), y);
 }

@@ -1,5 +1,4 @@
 #include "graphics.h"
-#include "globals.h"
 
 HBRUSH backgroundBrush = NULL;
 

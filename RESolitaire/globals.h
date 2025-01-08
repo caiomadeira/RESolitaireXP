@@ -25,9 +25,19 @@ extern int visibileHeight;
 
 // RegisterWindow
 extern UINT registerWindowMsg;
-/************************/
 
 // timer count
 extern int timerCount;
+
+/****** CONSTANTS *******/
+
+#define DECK_MAX 51
+#define TABLEAU_MAX 7
+#define TABLEAU_CARDS_MAX 19
+#define PILE_MAX 24
+#define FOUNDATION_CARDS_PER_PILE 13
+#define SUITS_SIZE 4
+
+/************************/
 
 #endif
