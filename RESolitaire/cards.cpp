@@ -1,4 +1,5 @@
 #include "cards.h"
+#include "globals.h"
 
 cdtInitPtr cdtInit = NULL;
 cdtDrawPtr cdtDraw = NULL;

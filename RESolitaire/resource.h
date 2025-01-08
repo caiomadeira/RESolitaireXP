@@ -18,6 +18,8 @@
     54 = NO CARDS (X)
     55 = NO CARDS (O)
 */
+#pragma once
+
 #define IDR_ACCEL 101
 #define ID_F1     1001
 #define ID_F2     1002

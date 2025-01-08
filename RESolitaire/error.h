@@ -1,5 +1,4 @@
 #pragma once
-
 #ifndef error_h
 #define error_h
 

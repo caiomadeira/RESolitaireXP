@@ -14,9 +14,10 @@
 #include <memory.h>
 #include <tchar.h>
 #include <wchar.h>
-
 #include <stdio.h>
 #include <time.h>
+#include <commctrl.h>
+#include <iostream>
 
 #pragma comment(lib, "comctl32.lib")
 

@@ -1,4 +1,5 @@
 #include "graphics.h"
+#include "globals.h"
 
 HBRUSH backgroundBrush = NULL;
 
@@ -79,4 +80,134 @@ void DrawBitmap(HDC hdc, LPCWSTR bitmapPath, int x, int y)
     SelectObject(hMemDC, hOldBitmap);
     DeleteDC(hMemDC);
     DeleteObject(hBitmap);
+}
+
+/****** STATUS BAR FUNCTIONS *******/
+LRESULT CALLBACK WindowProcStatusBar(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+{
+    LRESULT result;
+    RECT rect;
+
+    PAINTSTRUCT ps;
+    if (uMsg == WM_PAINT && hwnd != NULL) // uMsg == 0xf
+    {
+        HDC hdc = BeginPaint(hwnd, &ps);
+
+        // Size of bar
+        GetClientRect(statusHwnd, &rect);
+        //rect.top = rect.bottom - 30;
+        rect.right = rect.right + -4;
+
+        // Draw white background of bar
+        HBRUSH brush = CreateSolidBrush(RGB(255, 255, 255));
+        FillRect(hdc, &rect, brush);
+        DeleteObject(brush);
+
+        // Draw Score text
+        // Bg Transparent for text
+        SetBkMode(hdc, TRANSPARENT);
+        // Text color (black)
+        SetTextColor(hdc, RGB(0, 0, 0));
+
+        LPCWSTR pszFaceName = L"MS Shell Dlg"; // Font name
+
+        int cWeight = 700;
+        int cOrientation = 0;
+        int cEscapement = 0;
+        int cWidth = 0;
+        int nDenominator = 0x48;
+
+        int cHeight = GetDeviceCaps(hdc, 0x5a);
+        cHeight = MulDiv(9, cHeight, nDenominator);
+
+        // Definir a fonte (opcional, caso queira alterar o estilo do texto).
+        HFONT font = CreateFontW(-cHeight, cWidth, cEscapement, cOrientation, 
+            cWeight, 
+            0, 0, 0, // bItalic, bUnderline, bStrikeOut
+            1, // iCharSet
+            0, // iOutPrecision 
+            0, // iClipPrecision
+            0, // iQuality
+            0, // iPitchAndFamily
+            pszFaceName
+        );
+         
+        SelectObject(hdc, font);
+
+        // Exibir o texto à direita da barra.
+        std::wstring text = L"Score: 0 Time: 276";
+        DrawText(hdc, text.c_str(), -1, &rect, DT_RIGHT | DT_VCENTER | DT_SINGLELINE);
+
+        DeleteObject(font); // Libera a fonte.
+
+        // 4. (Opcional) Adicionar uma borda separadora acima da barra.
+        HPEN borderPen = CreatePen(PS_SOLID, 1, RGB(192, 192, 192)); // Cinza claro.
+        SelectObject(hdc, borderPen);
+        MoveToEx(hdc, rect.left, rect.top, NULL); // Linha no topo da barra.
+        LineTo(hdc, rect.right, rect.top);
+        DeleteObject(borderPen); // Libera a caneta.
+
+        EndPaint(hwnd, &ps);
+        result = 0;
+    } 
+    else 
+        result = DefWindowProc(hwnd, uMsg, wParam, lParam);
+
+    return result;
+}
+
+WNDCLASS ConfigWndClassStatusBar(void)
+{
+    WNDCLASS wc = { 0 };
+
+    wc.style = 0;
+    wc.lpfnWndProc = WindowProcStatusBar;
+    wc.cbWndExtra = 0;
+    wc.cbClsExtra = 0;
+    wc.hInstance = hInstance;
+    wc.hCursor = LoadCursor(NULL, IDC_ARROW);
+    wc.hbrBackground = (HBRUSH)(COLOR_BTNFACE + 1); // Fundo padrão
+    wc.lpszClassName = L"MyCustomStatusBar";
+
+    if (!RegisterClass(&wc)) 
+    {
+        DWORD errorCode = GetLastError();
+        wchar_t errorMsg[256];
+        FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM, NULL, errorCode, 0, errorMsg, 256, NULL);
+        MessageBox(NULL, errorMsg, L"ConfigWndClassStatusBar", MB_OK);
+    }
+    return wc;
+}
+
+int CreateStatusBarWindow(HWND parentHwnd, WNDCLASS wc)
+{
+    RECT rect;
+    int statusBarHeight = fontHeight + 2; // Fixed height
+    GetClientRect(parentHwnd, &rect);
+    statusHwnd = CreateWindowEx(
+        0, 
+        wc.lpszClassName, // Classe padrão do Windows para barras de status
+        L"", 
+        WS_CHILD | WS_VISIBLE, 
+        rect.left + -1, 
+        (rect.bottom - statusBarHeight) + 1, 
+        (rect.right - rect.left) + 2, 
+        statusBarHeight, 
+        parentHwnd, 
+        NULL, 
+        hInstance, 
+        NULL);
+    
+    if (!statusHwnd)
+    {
+        DWORD errorCode = GetLastError();
+        wchar_t errorMsg[256];
+        FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM, NULL, errorCode, 0, errorMsg, 256, NULL);
+        MessageBox(NULL, errorMsg, L"CreateStatusBarWindow", MB_OK);
+        return 0;
+    }
+
+    ShowWindow(statusHwnd, 4);
+    UpdateWindow(statusHwnd);
+    return 1;
 }
