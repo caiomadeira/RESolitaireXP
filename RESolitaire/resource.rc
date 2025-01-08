@@ -1,7 +1,0 @@
-#include <windows.h>
-
-101 ACCELERATORS
-BEGIN
-    VK_F1, 1001, VIRTKEY
-    VK_F2, 1002, VIRTKEY
-END
