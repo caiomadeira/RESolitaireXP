@@ -15,9 +15,11 @@
 #include <commctrl.h>
 #include <iostream>
 
-/****** FUNCTIONS SIGNATURES *******/
-BOOL LoadCardsDll(void);
+/****** WINDOW FUNCTIONS SIGNATURES *******/
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
+LRESULT CALLBACK WindowProcStatusBar(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
+WNDCLASS ConfigWndClassStatusBar(void);
+int CreateStatusBarWindow(HWND parentHwnd, WNDCLASS wc);
 void DrawInitialDeck(void);
 /************************/
 
@@ -58,13 +60,14 @@ LRESULT CALLBACK WindowProcStatusBar(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM
     RECT rect;
 
     PAINTSTRUCT ps;
-    if (uMsg == WM_PAINT) // uMsg == 0xf
+    if (uMsg == WM_PAINT && hwnd != NULL) // uMsg == 0xf
     {
         HDC hdc = BeginPaint(hwnd, &ps);
 
         // Size of bar
         GetClientRect(statusHwnd, &rect);
-        rect.top = rect.bottom - 30;
+        //rect.top = rect.bottom - 30;
+        rect.right = rect.right + -4;
 
         // Draw white background of bar
         HBRUSH brush = CreateSolidBrush(RGB(255, 255, 255));
@@ -77,11 +80,29 @@ LRESULT CALLBACK WindowProcStatusBar(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM
         // Text color (black)
         SetTextColor(hdc, RGB(0, 0, 0));
 
+        LPCWSTR pszFaceName = L"MS Shell Dlg"; // Font name
+
+        int cWeight = 700;
+        int cOrientation = 0;
+        int cEscapement = 0;
+        int cWidth = 0;
+        int nDenominator = 0x48;
+
+        int cHeight = GetDeviceCaps(hdc, 0x5a);
+        cHeight = MulDiv(9, cHeight, nDenominator);
+
         // Definir a fonte (opcional, caso queira alterar o estilo do texto).
-        HFONT font = CreateFont(
-            -16, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
-            ANSI_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
-            DEFAULT_QUALITY, DEFAULT_PITCH | FF_SWISS, TEXT("Arial"));
+        HFONT font = CreateFontW(-cHeight, cWidth, cEscapement, cOrientation, 
+            cWeight, 
+            0, 0, 0, // bItalic, bUnderline, bStrikeOut
+            1, // iCharSet
+            0, // iOutPrecision 
+            0, // iClipPrecision
+            0, // iQuality
+            0, // iPitchAndFamily
+            pszFaceName
+        );
+         
         SelectObject(hdc, font);
 
         // Exibir o texto à direita da barra.
@@ -101,14 +122,14 @@ LRESULT CALLBACK WindowProcStatusBar(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM
         result = 0;
     } 
     else 
-        result = DefWindowProc(statusHwnd, uMsg, wParam, lParam);
+        result = DefWindowProc(hwnd, uMsg, wParam, lParam);
 
     return result;
 }
 
-int ConfigWndClassStatusBar(int nCmdShow)
+WNDCLASS ConfigWndClassStatusBar(void)
 {
-    WNDCLASS wc = {0};
+    WNDCLASS wc = { 0 };
 
     wc.style = 0;
     wc.lpfnWndProc = WindowProcStatusBar;
@@ -126,23 +147,22 @@ int ConfigWndClassStatusBar(int nCmdShow)
         FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM, NULL, errorCode, 0, errorMsg, 256, NULL);
         MessageBox(NULL, errorMsg, L"ConfigWndClassStatusBar", MB_OK);
     }
-    return 1;
+    return wc;
 }
 
-int CreateStatusBarWindow(HWND parentHwnd)
+int CreateStatusBarWindow(HWND parentHwnd, WNDCLASS wc)
 {
     RECT rect;
-
-    int statusBarHeight = 30; // Fixed height
+    int statusBarHeight = fontHeight + 2; // Fixed height
     GetClientRect(parentHwnd, &rect);
     statusHwnd = CreateWindowEx(
         0, 
-        STATUSCLASSNAME, // Classe padrão do Windows para barras de status
+        wc.lpszClassName, // Classe padrão do Windows para barras de status
         L"", 
         WS_CHILD | WS_VISIBLE, 
-        rect.left, 
-        rect.bottom - statusBarHeight, 
-        rect.right - rect.left, 
+        rect.left + -1, 
+        (rect.bottom - statusBarHeight) + 1, 
+        (rect.right - rect.left) + 2, 
         statusBarHeight, 
         parentHwnd, 
         NULL, 
@@ -260,12 +280,8 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
                     if (!hAccTable) goto error_handler;
 
                     /********* This is like original code was, but it's too confusing ********/
-                    if (!ConfigWndClassStatusBar(SW_SHOW))
-                    {
-                        MessageBox(NULL, L"Falha ao registrar a classe StatusBar!", L"Erro", MB_OK);
-                        return 0;
-                    }
-                        CreateStatusBarWindow(hwnd);
+                    WNDCLASS wc2 = ConfigWndClassStatusBar();
+                    CreateStatusBarWindow(hwnd, wc2);
                     //PostMessage(hwnd, 0x111, 1000, 0);
                     /***********************************************************************/
 
@@ -321,25 +337,6 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
                 MessageBox(hwnd, L"F2 pressed!", L"Accelerator", MB_OK);
                 break;
         }
-    case WM_SIZE:
-    {
-        if (statusHwnd)
-        {
-            RECT rect;
-            GetClientRect(hwnd, &rect);
-
-            int statusBarHeight = 30;
-            MoveWindow(
-                statusHwnd,
-                rect.left,
-                rect.bottom - statusBarHeight,
-                rect.right - rect.left,
-                statusBarHeight,
-                TRUE
-            );
-        }
-        break;
-    }
     case WM_DESTROY:
         PostQuitMessage(0);
         break;
