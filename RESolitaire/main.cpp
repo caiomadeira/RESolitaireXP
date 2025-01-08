@@ -155,7 +155,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
                 windowRect.bottom = visibileHeight;
 
             // Init Window
-            hwnd = CreateWindowEx(0, wc.lpszClassName, wc.lpszClassName, WS_OVERLAPPEDWINDOW, 
+            hwnd = CreateWindowEx(0, wc.lpszClassName, wc.lpszClassName,  WS_OVERLAPPEDWINDOW & ~WS_SIZEBOX, 
                 CW_USEDEFAULT, CW_USEDEFAULT, windowRect.right, windowRect.bottom, 
                 NULL, NULL, hInstance, NULL);
 
