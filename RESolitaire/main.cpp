@@ -37,6 +37,9 @@ int visibileHeight = 0;
 UINT registerWindowMsg;
 /************************/
 
+// timer
+int timerCount = 0;
+
 /****** WINDOW FUNCTIONS SIGNATURES *******/
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 void DrawInitialDeck(void);
@@ -45,7 +48,11 @@ void DrawInitialDeck(void);
 int TimerCallback(void)
 {
     //MessageBox(hwnd, L"Timer acionado com callback!", L"Timer Callback", MB_OK);
-  return 1;
+    Sleep(1000);
+    timerCount++;
+    //Redraw status bar
+    InvalidateRect(statusHwnd, NULL, TRUE); 
+    return 1;
 }
 
 int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)

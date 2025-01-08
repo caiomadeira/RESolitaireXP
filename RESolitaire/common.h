@@ -18,6 +18,10 @@
 #include <time.h>
 #include <commctrl.h>
 #include <iostream>
+#include <sstream>
+#include <string>
+#include <thread>
+#include <chrono>
 
 #pragma comment(lib, "comctl32.lib")
 

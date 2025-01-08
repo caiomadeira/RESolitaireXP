@@ -27,4 +27,7 @@ extern int visibileHeight;
 extern UINT registerWindowMsg;
 /************************/
 
+// timer count
+extern int timerCount;
+
 #endif

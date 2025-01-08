@@ -3,6 +3,15 @@
 
 HBRUSH backgroundBrush = NULL;
 
+// util function to convert int into string
+#include <sstream>
+
+static std::wstring to_wstring_alt(int value) {
+    std::wstringstream wss;
+    wss << value;
+    return wss.str();
+}
+
 HBRUSH defaultBackGround(void)
 {
     if (!backgroundBrush)
@@ -135,7 +144,7 @@ LRESULT CALLBACK WindowProcStatusBar(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM
         SelectObject(hdc, font);
 
         // Exibir o texto à direita da barra.
-        std::wstring text = L"Score: 0 Time: 276";
+        std::wstring text = std::wstring(L"Score: 0 Time: ") + to_wstring_alt(timerCount);
         DrawText(hdc, text.c_str(), -1, &rect, DT_RIGHT | DT_VCENTER | DT_SINGLELINE);
 
         DeleteObject(font); // Libera a fonte.
